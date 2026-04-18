@@ -12,9 +12,9 @@ WORKDIR /app
 
 COPY . .
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
-RUN PORT=3000 pnpm --filter @workspace/apk-builder run build
+RUN PORT=3000 BASE_PATH=/ NODE_ENV=production pnpm --filter @workspace/apk-builder run build
 
 RUN pnpm --filter @workspace/api-server run build
 
