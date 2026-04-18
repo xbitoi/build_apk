@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useListKeystores } from "@workspace/api-client-react";
-import { Key, Plus, Trash2, Loader2, ShieldCheck } from "lucide-react";
+import { Key, Plus, Trash2, Loader2, ShieldCheck, ArrowLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -65,11 +66,16 @@ export default function Keystore() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto w-full space-y-6 overflow-auto h-full">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-5 overflow-auto h-full">
+      <div className="flex items-center gap-2">
+        <Button asChild variant="ghost" size="sm" className="gap-1 -ml-2">
+          <Link href="/"><ArrowLeft className="h-4 w-4" /> Dashboard</Link>
+        </Button>
+      </div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Keystore</h1>
-          <p className="text-muted-foreground mt-1">Manage signing keystores for production builds.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Keystore</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Manage signing keystores for production builds.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

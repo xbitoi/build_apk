@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import {
   useListGeminiKeys,
   useUpdateGeminiKey,
@@ -6,13 +7,14 @@ import {
   useGetSettings,
   useUpdateSetting,
 } from "@workspace/api-client-react";
-import { Key, RefreshCw, CheckCircle2, AlertCircle, Eye, EyeOff, Save } from "lucide-react";
+import { Key, RefreshCw, CheckCircle2, AlertCircle, Eye, EyeOff, Save, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -35,7 +37,10 @@ function GeminiKeySlot({ slot, data }: { slot: number; data: any }) {
           setEditing(false);
           setNewKeyValue("");
         },
-        onError: () => toast({ variant: "destructive", title: "Failed to save key" }),
+        onError: (err: any) => {
+          const msg = err?.data?.error || err?.message || "Failed to save key. Check the key is valid.";
+          toast({ variant: "destructive", title: "Failed to save key", description: msg });
+        },
       }
     );
   };
@@ -163,10 +168,15 @@ export default function Settings() {
   ];
 
   return (
-    <div className="p-6 max-w-4xl mx-auto w-full space-y-6 overflow-auto h-full">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto w-full space-y-5 overflow-auto h-full">
+      <div className="flex items-center gap-2">
+        <Button asChild variant="ghost" size="sm" className="gap-1 -ml-2">
+          <Link href="/"><ArrowLeft className="h-4 w-4" /> Dashboard</Link>
+        </Button>
+      </div>
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-1">Configure Gemini API keys and build environment.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground mt-1 text-sm">Configure Gemini API keys and build environment.</p>
       </div>
 
       <Card>

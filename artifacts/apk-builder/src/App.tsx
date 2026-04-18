@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
+import { ThemeProvider } from "@/lib/theme";
 
 import Dashboard from "@/pages/dashboard";
 import Projects from "@/pages/projects";
@@ -15,7 +16,16 @@ import Settings from "@/pages/settings";
 import Chat from "@/pages/chat";
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 30_000,
+      throwOnError: false,
+    },
+    mutations: {
+      throwOnError: false,
+    },
+  },
 });
 
 function Router() {
@@ -40,12 +50,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <div className="dark">
+        <ThemeProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Router />
-          </div>
-        </WouterRouter>
-        <Toaster />
+          </WouterRouter>
+          <Toaster />
+        </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

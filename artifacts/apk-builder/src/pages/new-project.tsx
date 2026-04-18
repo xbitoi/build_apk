@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { useCreateProject, CreateProjectBodySourceType } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -23,17 +24,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const formSchema = z.object({
   name: z.string().min(1, "Project name is required"),
   sourceType: z.nativeEnum(CreateProjectBodySourceType),
-  sourceUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
-  packageId: z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+[0-9a-z_]$/i, "Invalid package ID format (e.g. com.example.app)"),
+  sourceUrl: z.string().url("Must be a valid URL (e.g. https://github.com/user/repo)").optional().or(z.literal("")),
+  packageId: z.string().regex(
+    /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+[0-9a-z_]$/i,
+    "Invalid format. Use reverse domain notation: com.example.app"
+  ),
   appName: z.string().min(1, "App name is required"),
-  versionName: z.string().min(1, "Version name is required"),
-  versionCode: z.coerce.number().min(1, "Version code must be at least 1"),
+  versionName: z.string().min(1, "Version name is required").regex(/^\d+\.\d+(\.\d+)?$/, "Use format: 1.0.0"),
+  versionCode: z.coerce.number().min(1, "Version code must be at least 1").int("Must be a whole number"),
 });
 
 export default function NewProject() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createProject = useCreateProject();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,6 +54,7 @@ export default function NewProject() {
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    setSubmitError(null);
     createProject.mutate(
       { data: values },
       {
@@ -57,10 +63,16 @@ export default function NewProject() {
           setLocation(`/projects/${project.id}`);
         },
         onError: (error: any) => {
+          const msg =
+            error?.data?.error ||
+            error?.data?.message ||
+            error?.message ||
+            "An unexpected error occurred. Check the API server is running.";
+          setSubmitError(msg);
           toast({
             variant: "destructive",
             title: "Failed to create project",
-            description: error?.message || "An unexpected error occurred",
+            description: msg,
           });
         },
       }
@@ -70,15 +82,30 @@ export default function NewProject() {
   const sourceType = form.watch("sourceType");
 
   return (
-    <div className="p-6 max-w-2xl mx-auto w-full">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto w-full overflow-auto h-full">
+      <div className="flex items-center gap-2 mb-5">
+        <Button asChild variant="ghost" size="sm" className="gap-1 -ml-2">
+          <Link href="/projects">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Link>
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>New Project</CardTitle>
           <CardDescription>Create a new Android APK/AAB project from your web app source.</CardDescription>
         </CardHeader>
         <CardContent>
+          {submitError && (
+            <Alert variant="destructive" className="mb-5">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-sm">{submitError}</AlertDescription>
+            </Alert>
+          )}
+
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
                 name="name"
@@ -127,7 +154,9 @@ export default function NewProject() {
                         <Input placeholder="https://github.com/user/repo" {...field} />
                       </FormControl>
                       <FormDescription>
-                        For GitHub, use the repository URL. For ZIP, use the direct download link.
+                        {sourceType === "github"
+                          ? "Full GitHub repository URL (e.g. https://github.com/user/repo)"
+                          : "Direct URL to a ZIP archive of your web app"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -135,7 +164,7 @@ export default function NewProject() {
                 />
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="appName"
@@ -145,7 +174,7 @@ export default function NewProject() {
                       <FormControl>
                         <Input placeholder="My App" {...field} />
                       </FormControl>
-                      <FormDescription>Displayed on the device launcher.</FormDescription>
+                      <FormDescription className="text-xs">Shown on device launcher</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -160,7 +189,7 @@ export default function NewProject() {
                       <FormControl>
                         <Input placeholder="com.example.app" {...field} />
                       </FormControl>
-                      <FormDescription>Unique identifier (reverse domain notation).</FormDescription>
+                      <FormDescription className="text-xs">Reverse domain notation</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -175,7 +204,7 @@ export default function NewProject() {
                       <FormControl>
                         <Input placeholder="1.0.0" {...field} />
                       </FormControl>
-                      <FormDescription>Public version string.</FormDescription>
+                      <FormDescription className="text-xs">Public version string</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -190,14 +219,14 @@ export default function NewProject() {
                       <FormControl>
                         <Input type="number" placeholder="1" {...field} />
                       </FormControl>
-                      <FormDescription>Internal version number (must increment on updates).</FormDescription>
+                      <FormDescription className="text-xs">Integer, must increment each release</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="flex justify-end gap-4">
+              <div className="flex justify-end gap-3 pt-2">
                 <Button variant="outline" type="button" onClick={() => setLocation("/projects")}>
                   Cancel
                 </Button>
