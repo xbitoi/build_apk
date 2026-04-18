@@ -34,14 +34,27 @@ if errorlevel 1 (
 for /f "tokens=*" %%v in ('pnpm -v') do set PNPM_VER=%%v
 echo [OK] pnpm: %PNPM_VER%
 
-:: ---- Move to project root (same folder as this bat file) ----
+:: ---- Move to project root ----
 cd /d "%~dp0"
 echo [OK] Working directory: %CD%
 
-:: ---- Install dependencies ----
+:: ---- Clean Linux lock file and node_modules to allow Windows-native rebuild ----
 echo.
-echo [STEP 1/3] Installing dependencies (pnpm install)...
-call pnpm install
+echo [STEP 1/3] Cleaning old dependencies for Windows compatibility...
+if exist "pnpm-lock.yaml" (
+    del /f /q "pnpm-lock.yaml"
+    echo [OK] Removed Linux lock file.
+)
+if exist "node_modules" (
+    echo [INFO] Removing node_modules (this may take a moment)...
+    rmdir /s /q "node_modules"
+    echo [OK] Removed node_modules.
+)
+
+:: ---- Install dependencies fresh for Windows ----
+echo.
+echo [STEP 2/4] Installing dependencies for Windows...
+call pnpm install --no-frozen-lockfile
 if errorlevel 1 (
     echo [ERROR] Dependency installation failed.
     pause
@@ -51,7 +64,7 @@ echo [OK] Dependencies installed.
 
 :: ---- Build API Server ----
 echo.
-echo [STEP 2/3] Building API Server...
+echo [STEP 3/4] Building API Server...
 cd /d "%~dp0artifacts\api-server"
 call pnpm run build
 if errorlevel 1 (
@@ -69,18 +82,17 @@ if not exist "%~dp0artifacts\api-server\data" (
     echo [OK] Created data directory.
 )
 
-:: ---- Launch API Server in a new window (port 8080) ----
+:: ---- Launch API Server ----
 echo.
-echo [STEP 3/3] Launching servers...
+echo [STEP 4/4] Launching servers...
 echo.
 
 start "APK Builder - API Server (port 8080)" cmd /k "cd /d "%~dp0artifacts\api-server" && set NODE_ENV=production && set PORT=8080 && node --enable-source-maps ./dist/index.mjs"
 
-:: Wait for the API server to start
 timeout /t 4 /nobreak >nul
 
-:: ---- Launch Frontend dev server in a new window (port 5173) ----
-start "APK Builder - Frontend (port 5173)" cmd /k "cd /d "%~dp0artifacts\apk-builder" && set NODE_ENV=development && set PORT=5173 && pnpm run dev"
+:: ---- Launch Frontend ----
+start "APK Builder - Frontend (port 5173)" cmd /k "cd /d "%~dp0artifacts\apk-builder" && set NODE_ENV=development && set PORT=5173 && set BASE_PATH=/ && pnpm run dev"
 
 echo  ================================================
 echo   Application started successfully!
@@ -92,7 +104,6 @@ echo   Open your browser at: http://localhost:5173
 echo  ================================================
 echo.
 
-:: Open browser after frontend has a moment to start
 timeout /t 6 /nobreak >nul
 start "" "http://localhost:5173"
 
